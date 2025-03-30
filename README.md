@@ -10,10 +10,15 @@ Fast Forward should stick now in B42 until you're done OR until a zombie gets a 
 Adds a Right-Click Logging Menu
 
 Identify Tree [41] [42]
+
 Gather Logs [41] [42]
+
 Gather Twigs and Branches [42]
+
 Clear Trees [41] [42]
+
 Clear Bushes [42]
+
 Cut Grass [42]
 
 
