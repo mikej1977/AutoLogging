@@ -1,9 +1,11 @@
 JBLogging = JBLogging or {}
-
+local JB_ASSUtils = require("JB_ASSUtils")
+require("JB_ModOptions")
 
 local old_ISChopTreeAction_new = ISChopTreeAction.new
 function ISChopTreeAction:new(character, tree)
     local ret = old_ISChopTreeAction_new(self, character, tree)
+    -- if "lower health" mod option then
     if not (character:getDescriptor():getProfession() == "lumberjack") or
         (character:HasTrait("Axeman")) then
         return ret
@@ -21,33 +23,118 @@ local function predicateCutPlant(item)
     return not item:isBroken() and item:hasTag("CutPlant")
 end
 
-
 JBLogging.doWorldContextMenu = function(playerIndex, context, worldObjects, test)
-    if test and ISWorldObjectContextMenu.Test then return true end
-    if test then return ISWorldObjectContextMenu.setTest() end
-    JBLogging.playerObj = getSpecificPlayer(playerIndex)
-    JBLogging.playerIndex = playerIndex
-    JBLogging.playerInv = JBLogging.playerObj:getInventory()
-    if JBLogging.playerObj:getVehicle() then return end
-    local axe = JBLogging.playerInv:getFirstEvalRecurse(predicateChopTree)
-    local hasCuttingTool = JBLogging.playerInv:containsEvalRecurse(predicateCutPlant)
-    local putMenuWhere = getText("ContextMenu_SitGround")
-    local loggingMenu = context:insertOptionAfter(putMenuWhere, getText("UI_JBLogging_Menu_Name"), worldObjects, nil)
+    if test then
+        if ISWorldObjectContextMenu.Test then return true end
+        return ISWorldObjectContextMenu.setTest()
+    end
+
+    local playerObj = getSpecificPlayer(playerIndex)
+    if playerObj:getVehicle() then return end
+
+    local playerInv = playerObj:getInventory()
+    local axe = playerInv:getFirstEvalRecurse(predicateChopTree)
+    local hasCuttingTool = playerInv:containsEvalRecurse(predicateCutPlant)
+
+    local clickedFlags = {
+        tree = false,
+        logs = false,
+        plank = false,
+        twig = false,
+        bush = false,
+        grass = false
+    }
+
     local subMenu = ISContextMenu:getNew(context)
-    subMenu:addOption(getText("UI_JBLogging_Menu_Identify"), worldObjects, JBLogging.doTreeInfo)
-    subMenu:addOption(getText("UI_JBLogging_Menu_Gather_Logs"), worldObjects, JBLogging.doGatherLogs, playerIndex)
-    subMenu:addOption(getText("UI_JBLogging_Menu_Gather_Branches"), worldObjects, JBLogging.doGatherTwigsAndBranches, playerIndex)
-    if axe then
-        subMenu:addOption(getText("UI_JBLogging_Menu_Clear_Trees"), worldObjects, JBLogging.doClearTrees,
-            JBLogging.playerObj)
+
+    local modOptions = PZAPI.ModOptions:getOptions("JBLoggingModOptions")
+    local alwaysShowMenu = modOptions:getOption("Always_Show_Menu"):getValue(1)
+    local keepOnTop = modOptions:getOption("Keep_Menu_At_Top"):getValue(1)
+    local highlightColorData = modOptions:getOption("Select_Color"):getValue()
+
+    JB_ASSUtils.highlightColorData = { red = highlightColorData.r, green = highlightColorData.g, blue = highlightColorData.b }
+    playerObj:getModData().highlightColorData = { red = highlightColorData.r, green = highlightColorData.g, blue = highlightColorData.b }
+    
+    local sq = worldObjects[1]:getSquare()
+    local z = sq:getZ()
+    local squares = {}
+
+    for dx = -1, 1 do
+        for dy = -1, 1 do
+            table.insert(squares, getSquare(sq:getX() + dx, sq:getY() + dy, z))
+        end
     end
-    if hasCuttingTool then
-        subMenu:addOption(getText("UI_JBLogging_Menu_Clear_Bushes"), worldObjects, JBLogging.doClearBushes,
-            JBLogging.playerObj)
-        subMenu:addOption(getText("UI_JBLogging_Menu_Clear_Grass"), worldObjects, JBLogging.doClearGrass,
-            JBLogging.playerObj)
+
+    local function processSquare(square)
+        local wobs = square:getWorldObjects()
+        local obs = square:getObjects()
+        local twigs = { 
+            ["Base.LargeBranch"] = true, 
+            ["Base.Sapling"] = true, 
+            ["Base.TreeBranch2"] = true, 
+            ["Base.Twigs"] = true, 
+            ["Base.Splinters"] = true 
+        }
+
+        for i = 0, wobs:size() - 1 do
+            local o = wobs:get(i)
+            if instanceof(o, "IsoWorldInventoryObject") then
+                local fullType = o:getItem():getFullType()
+                if fullType == "Base.Log" then
+                    clickedFlags.logs = true
+                elseif fullType == "Base.Plank" then
+                    clickedFlags.plank = true
+                elseif twigs[fullType] then
+                    clickedFlags.twig = true
+                end
+            end
+        end
+
+        for i = 0, obs:size() - 1 do
+            local o = obs:get(i)
+            if o:getProperties() and o:getProperties():Is(IsoFlagType.canBeRemoved) then
+                clickedFlags.grass = true
+            elseif o:getSprite() and o:getSprite():getProperties() and o:getSprite():getProperties():Is(IsoFlagType.canBeCut) then
+                clickedFlags.bush = true
+            end
+        end
+
+        if square:HasTree() then
+            clickedFlags.tree = true
+        end
     end
-    context:addSubMenu(loggingMenu, subMenu)
+
+    for _, square in ipairs(squares) do
+        processSquare(square)
+    end
+
+    local menuOptions = {
+        { condition = clickedFlags.tree, translate = "UI_JBLogging_Menu_Identify", action = JBLogging.doTreeInfo },
+        { condition = clickedFlags.logs, translate = "UI_JBLogging_Menu_Gather_Logs", action = JBLogging.doGatherLogs },
+        { condition = clickedFlags.twig, translate = "UI_JBLogging_Menu_Gather_Branches", action = JBLogging.doGatherTwigsAndBranches },
+        { condition = axe and clickedFlags.tree, translate = "UI_JBLogging_Menu_Clear_Trees", action = JBLogging.doClearTrees },
+        { condition = hasCuttingTool and clickedFlags.bush, translate = "UI_JBLogging_Menu_Clear_Bushes", action = JBLogging.doClearBushes },
+        { condition = hasCuttingTool and clickedFlags.grass, translate = "UI_JBLogging_Menu_Clear_Grass", action = JBLogging.doClearGrass }
+    }
+
+    local showMenu = false
+    for i = 1, #menuOptions do
+        local option = menuOptions[i]
+        if option.condition or alwaysShowMenu then
+            subMenu:addOption(getText(option.translate), worldObjects, option.action, playerObj)
+            showMenu = true
+        end
+    end
+
+    if showMenu then
+        local loggingMenu
+        if keepOnTop then
+            loggingMenu = context:addOptionOnTop(getText("UI_JBLogging_Menu_Name"))
+        else
+            loggingMenu = context:insertOptionAfter(getText("ContextMenu_SitGround"), getText("UI_JBLogging_Menu_Name"), worldObjects, nil)
+        end
+        context:addSubMenu(loggingMenu, subMenu)
+    end
 end
 
 
@@ -57,96 +144,28 @@ JBLogging.doInvContextMenu = function(playerIndex, context, items)
     return
 end
 
-JBLogging.doTreeInfo = function()
-    JBSelectUtils.getSingleSquare()
-    Events.OnSelectSquare.Add(JBLogging.treeInfo)
+JBLogging.doTreeInfo = function(worldObjects, playerObj)
+    JB_ASSUtils.SelectSingleSquare(worldObjects, playerObj, JBLogging.treeInfo)
 end
 
-JBLogging.doGatherLogs = function(worldObjects, playerIndex)
-    JBSelectUtils.selectArea(true)
-    Events.OnSelectArea.Add(JBLogging.gatherLogs)
+JBLogging.doGatherLogs = function(worldObjects, playerObj)
+    JB_ASSUtils.SelectSquareAndArea(worldObjects, playerObj, JBLogging.gatherItems, "Base.Log")
 end
 
-JBLogging.doClearTrees = function()
-    JBSelectUtils.selectArea(false)
-    Events.OnSelectArea.Add(JBLogging.clearTrees)
+JBLogging.doClearTrees = function(worldObjects, playerObj)
+    JB_ASSUtils.SelectArea(worldObjects, playerObj, JBLogging.clearTrees)
 end
 
-JBLogging.doClearBushes = function()
-    JBSelectUtils.selectArea(false)
-    Events.OnSelectArea.Add(JBLogging.ClearBushes)
+JBLogging.doClearBushes = function(worldObjects, playerObj)
+    JB_ASSUtils.SelectArea(worldObjects, playerObj, JBLogging.ClearBushes)
 end
 
-JBLogging.doClearGrass = function()
-    JBSelectUtils.selectArea(false)
-    Events.OnSelectArea.Add(JBLogging.ClearGrass)
+JBLogging.doClearGrass = function(worldObjects, playerObj)
+    JB_ASSUtils.SelectArea(worldObjects, playerObj, JBLogging.ClearGrass)
 end
 
-JBLogging.doGatherTwigsAndBranches = function()
-    JBSelectUtils.selectArea(true)
-    Events.OnSelectArea.Add(JBLogging.gatherTwigsAndBranches)
-end
-
-JBLogging.SpeedHelper = function()
-    local gameSpeedMultiplier = { 1, 5, 20, 40 }
-    if getGameSpeed() ~= JBLogging.newGameSpeed then
-        setGameSpeed(JBLogging.newGameSpeed)
-        getGameTime():setMultiplier(gameSpeedMultiplier[JBLogging.newGameSpeed])
-    end
-end
-
-JBLogging.OnTickKeepSpeed = function(tick)
-    if isClient() then 
-        Events.OnTick.Remove(JBLogging.OnTickKeepSpeed)
-    end
-
-    if tick % 50 == 0 then
-        print("OnTick is running")
-    end
-
-    if getGameSpeed() > 1 then
-        JBLogging.newGameSpeed = getGameSpeed()
-    end
-
-    JBLogging.SpeedHelper()
-    
-    local function resetGameSpeed()
-        if not isClient() then
-            setGameSpeed(1)
-            getGameTime():setMultiplier(1)
-        end
-    end
-    if instanceof(JBLogging.playerObj, "IsoPlayer") then
-        if not ISTimedActionQueue.isPlayerDoingAction(JBLogging.playerObj) then
-            resetGameSpeed()
-            Events.OnTick.Remove(JBLogging.OnTickKeepSpeed)
-            return
-        end
-        if JBLogging.playerObj:getStats():getNumVisibleZombies() > 0 or
-        JBLogging.playerObj:getStats():getNumChasingZombies() > 0 or
-        JBLogging.playerObj:getStats():getNumVeryCloseZombies() > 0 then
-            JBLogging.playerObj:Say("Not now...")
-            ISTimedActionQueue.clear(JBLogging.playerObj)
-            resetGameSpeed()
-            Events.OnTick.Remove(JBLogging.OnTickKeepSpeed)
-            return
-        end
-        if JBLogging.playerObj:pressedMovement(false) or JBLogging.playerObj:pressedCancelAction() then
-            resetGameSpeed()
-            Events.OnTick.Remove(JBLogging.OnTickKeepSpeed)
-            return
-        end
-        if JBLogging.playerObj:isRunning() or JBLogging.playerObj:isSprinting() then
-            resetGameSpeed()
-            Events.OnTick.Remove(JBLogging.OnTickKeepSpeed)
-            return
-        end
-    end
-    if JBLogging.lastTreeSquare and not JBLogging.lastTreeSquare:HasTree() then
-        resetGameSpeed()
-        Events.OnTick.Remove(JBLogging.OnTickKeepSpeed)
-        return
-    end
+JBLogging.doGatherTwigsAndBranches = function(worldObjects, playerObj)
+    JB_ASSUtils.SelectSquareAndArea(worldObjects, playerObj, JBLogging.gatherTwigsAndBranches)
 end
 
 Events.OnFillWorldObjectContextMenu.Add(JBLogging.doWorldContextMenu)

@@ -1,5 +1,5 @@
 UI_EN = {
-    UI_JBLogging_Menu_Name = "Logging",
+    UI_JBLogging_Menu_Name = "Logging Menu",
     UI_JBLogging_Menu_Identify = "Identify Tree",
     UI_JBLogging_Menu_Gather_Logs = "Gather Logs",
     UI_JBLogging_Menu_Clear_Trees = "Clear Trees",
@@ -37,5 +37,10 @@ UI_EN = {
     UI_JBLogging_Ident_10 = "Without a doubt, that's %s %s",
 
     UI_JBLogging_Say_Nope = "Not now...",
+
+    UI_options_JBLogging_Always_Show_Menu = "Always Show Logging Menu",
+    UI_options_JBLogging_Keep_Menu_At_Top = "Show Logging Menu At The Top",
+    UI_options_JBLogging_Select_Color = "Choose Color For Selection Outline",
+    UI_options_JBLogging_Title = "JB's Auto Logging Menu Options",
 
 }

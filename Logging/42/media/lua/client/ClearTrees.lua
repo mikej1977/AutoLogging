@@ -1,18 +1,19 @@
 JBLogging = JBLogging or {}
+local ActionSpeedKeeper = require("JB_SpeedKeeper")
 
-
-JBLogging.clearTrees = function(_, selectedSquares)
-    Events.OnSelectArea.Remove(JBLogging.clearTrees)
-    if not selectedSquares then return end
-    JBLogging.newGameSpeed = getGameSpeed()
-    for _, v in ipairs(selectedSquares) do
+JBLogging.clearTrees = function(playerObj, worldObjects, selectedArea)
+    if not selectedArea then return end
+    for _, v in ipairs(selectedArea.squares) do
         if v:HasTree() then
-            ISWorldObjectContextMenu.doChopTree(getPlayer(), v:getTree())
+            ISWorldObjectContextMenu.doChopTree(playerObj, v:getTree())
             JBLogging.lastTreeSquare = v
         end
     end
-    Events.OnTick.Add(JBLogging.OnTickKeepSpeed)
-end
 
+    local actionSpeedKeeper = ActionSpeedKeeper:new(playerObj)
+    actionSpeedKeeper:AddStopCondition(function(playerObj) return JBLogging.lastTreeSquare and not JBLogging.lastTreeSquare:HasTree() end)
+    actionSpeedKeeper:KeepSpeed()
+
+end
 
 return JBLogging

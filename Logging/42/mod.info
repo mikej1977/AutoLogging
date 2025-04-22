@@ -1,3 +1,8 @@
 name=Auto Logging
 id=JBLogging
-description=Automatically chop trees and gather logs
+description=Automatically chop trees, gather logs and more
+require=\JB_ASSUtils
+modversion=2.01
+icon=icon.png
+poster=poster.png
+author=jimbeamdiablo
