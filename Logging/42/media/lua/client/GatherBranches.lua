@@ -1,7 +1,8 @@
 JBLogging = JBLogging or {}
-
+local ActionSpeedKeeper = require("JB_SpeedKeeper")
 
 JBLogging.gatherTwigsAndBranches = function(playerObj, worldObjects, selectedSquare, selectedArea)
+    
     JBLogging.whatWeWant = { "Base.LargeBranch", "Base.Sapling", "Base.TreeBranch2", "Base.Twigs", "Base.Splinters" }
     
     if not selectedArea then
@@ -57,7 +58,8 @@ JBLogging.gatherTwigsAndBranches = function(playerObj, worldObjects, selectedSqu
         end
     end
 
-    JB_SpeedKeeper.KeepSpeed(playerObj)
+    local actionSpeedKeeper = ActionSpeedKeeper:new(playerObj)
+    actionSpeedKeeper:KeepSpeed()
     
 end
 

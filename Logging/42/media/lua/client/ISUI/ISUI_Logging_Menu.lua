@@ -165,7 +165,7 @@ JBLogging.doClearGrass = function(worldObjects, playerObj)
 end
 
 JBLogging.doGatherTwigsAndBranches = function(worldObjects, playerObj)
-    JB_ASSUtils.SelectSquareAndArea(worldObjects, playerObj, JBLogging.gatherTwigsAndBranches)
+    JB_ASSUtils.SelectSquareAndArea(worldObjects, playerObj, JBLogging.gatherItems, "Base.LargeBranch", "Base.Sapling", "Base.TreeBranch2", "Base.Twigs", "Base.Splinters")
 end
 
 Events.OnFillWorldObjectContextMenu.Add(JBLogging.doWorldContextMenu)

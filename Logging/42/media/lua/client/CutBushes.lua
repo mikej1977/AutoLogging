@@ -1,7 +1,8 @@
 JBLogging = JBLogging or {}
-
+local ActionSpeedKeeper = require("JB_SpeedKeeper")
 
 JBLogging.ClearBushes = function(playerObj, worldObjects, selectedArea)
+    print("clearing bushes")
     if not selectedArea then return end
     for _, square in ipairs(selectedArea.squares) do
         for i = 1, square:getObjects():size() do
@@ -12,7 +13,8 @@ JBLogging.ClearBushes = function(playerObj, worldObjects, selectedArea)
         end
     end
     
-    JB_SpeedKeeper.KeepSpeed(playerObj)
+    local actionSpeedKeeper = ActionSpeedKeeper:new(playerObj)
+    actionSpeedKeeper:KeepSpeed()
 end
 
 

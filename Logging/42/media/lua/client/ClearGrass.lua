@@ -1,5 +1,5 @@
 JBLogging = JBLogging or {}
-require("JB_SpeedKeeper")
+local ActionSpeedKeeper = require("JB_SpeedKeeper")
 
 JBLogging.ClearGrass = function(playerObj, worldObjects, selectedArea)
     if not selectedArea then return end
@@ -12,7 +12,8 @@ JBLogging.ClearGrass = function(playerObj, worldObjects, selectedArea)
         end
     end
     
-    JB_SpeedKeeper.KeepSpeed(playerObj)
+    local actionSpeedKeeper = ActionSpeedKeeper:new(playerObj)
+    actionSpeedKeeper:KeepSpeed()
     
 end
 

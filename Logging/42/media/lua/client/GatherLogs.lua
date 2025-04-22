@@ -1,5 +1,3 @@
--- copilot
-
 JBLogging = JBLogging or {}
 local ActionSpeedKeeper = require("JB_SpeedKeeper")
 
